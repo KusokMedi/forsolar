@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Solar System 2026</title>
+    <!-- Подключение шрифта Doto -->
+    <link href="https://fonts.googleapis.com/css2?family=Doto:wght@900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #ffd700;
+            --heart-red: #ff3366;
+            --deep-space: #05050a;
+            --glass: rgba(255, 255, 255, 0.03);
+            --border: rgba(255, 255, 255, 0.1);
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: var(--deep-space);
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            color: white;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            height: 100%;
+        }
+
+        /* Прелоадер */
+        #loader {
+            position: fixed;
+            inset: 0;
+            background: var(--deep-space);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            transition: opacity 1s ease-out, visibility 1s;
+        }
+
+        .loader-content {
+            width: 200px;
+            text-align: center;
+        }
+
+        .progress-container {
+            width: 100%;
+            height: 2px;
+            background: rgba(255, 255, 255, 0.1);
+            margin-top: 20px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        #progress-bar {
+            width: 0%;
+            height: 100%;
+            background: var(--heart-red);
+            box-shadow: 0 0 10px var(--heart-red);
+            transition: width 0.3s ease;
+        }
+
+        .loader-text {
+            font-size: 0.6rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            color: white;
+            opacity: 0.8;
+        }
+
+        /* Интерфейс */
+        #ui-layer {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: clamp(20px, 5vw, 60px);
+            box-sizing: border-box;
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 1.5s ease;
+        }
+
+        #ui-layer.visible { opacity: 1; }
+
+        /* Заголовок: ШРИФТ DOTO, МЕНЬШЕ И РАСТЯНУТЕЕ */
+        .header h1 {
+            font-family: 'Doto', sans-serif;
+            font-size: clamp(1.5rem, 5vw, 3rem); /* Уменьшил размер */
+            letter-spacing: clamp(10px, 2vw, 20px);
+            text-transform: uppercase;
+            margin: 0;
+            color: rgba(255, 255, 255, 0.08);
+            text-align: center;
+            font-weight: 900;
+            transform: scaleX(1.4); /* Чуть больше растяжения для стиля Doto */
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.03));
+        }
+
+        /* Карточка / Попап */
+        .info-card {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            background: rgba(15, 15, 20, 0.95);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            padding: 30px;
+            border-radius: 24px;
+            border: 1px solid var(--border);
+            text-align: center;
+            width: 85%;
+            max-width: 400px;
+            display: none;
+            flex-direction: column;
+            pointer-events: all;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.8);
+            z-index: 100;
+            opacity: 0;
+            transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .info-card.active {
+            display: flex;
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        #card-title {
+            color: var(--gold);
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-weight: 600;
+        }
+
+        #card-text {
+            line-height: 1.6;
+            font-size: 1.1rem;
+            color: rgba(255, 255, 255, 0.95);
+            margin-bottom: 25px;
+            min-height: 4em;
+            word-wrap: break-word;
+            white-space: pre-wrap;
+            padding: 0 10px;
+            font-weight: 700;
+        }
+
+        .btn-close {
+            background: white;
+            border: none;
+            color: black;
+            padding: 12px 30px;
+            border-radius: 12px;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            transition: transform 0.2s;
+            margin-top: auto;
+        }
+
+        .btn-close:hover { transform: scale(1.05); }
+
+        .secret-footer {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            pointer-events: all;
+        }
+
+        .heart-icon {
+            font-size: 1.8rem;
+            color: var(--heart-red);
+            filter: drop-shadow(0 0 10px var(--heart-red));
+            animation: heart-beat 2s infinite ease-in-out;
+            transition: transform 0.3s;
+        }
+
+        @keyframes heart-beat {
+            0%, 100% { transform: scale(1); opacity: 0.7; }
+            50% { transform: scale(1.2); opacity: 1; }
+        }
+
+        canvas { display: block; touch-action: none; }
+    </style>
+</head>
+<body>
+
+    <div id="loader">
+        <div class="loader-content">
+            <div class="loader-text">ЗАГРУЗКА</div>
+            <div class="progress-container">
+                <div id="progress-bar"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="ui-layer">
+        <div class="header">
+            <h1>SOLAR</h1>
+        </div>
+
+        <div class="secret-footer" onclick="getPersonalMessage()">
+            <div class="heart-icon">❤</div>
+        </div>
+    </div>
+
+    <div id="info-card" class="info-card">
+        <div id="card-title"></div>
+        <div id="card-content">
+            <p id="card-text"></p>
+        </div>
+        <button class="btn-close" onclick="closeCard()">ЗАКРЫТЬ</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        let scene, camera, renderer, sun, starField, starField2;
+        let planets = [];
+        let typingInterval;
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let isCardOpen = false;
+
+        const planetData = [
+            { name: "Меркурий", color: 0xA5A5A5, distance: 15, size: 0.8, speed: 0.02, text: "Маленький, но самый быстрый, - прямо как мои мысли о тебе." },
+            { name: "Венера", color: 0xE3BB76, distance: 22, size: 1.4, speed: 0.015, text: "Самая яркая и горячая планета, - совсем как мои чувства к тебе." },
+            { name: "Земля", color: 0x2277ff, distance: 30, size: 1.5, speed: 0.01, text: "Наш общий дом, - единственное место во Вселенной, где я нашел свое сокровище в тебе." },
+            { name: "Марс", color: 0xff4422, distance: 38, size: 1.1, speed: 0.008, text: "Красная планета энергии и смелости, - такая же вдохновляющая, как ты." },
+            { name: "Юпитер", color: 0xD39C7E, distance: 52, size: 3.2, speed: 0.005, text: "Великий защитник, притягивающий взгляды, - совсем как ты в моей жизни." },
+            { name: "Сатурн", color: 0xC5AB6E, distance: 68, size: 2.7, speed: 0.003, ring: true, text: "Его кольца делают его самым уникальным, - такая же неповторимая, как ты." }
+        ];
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 5000);
+            camera.position.set(0, 60, 140);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
+
+            const sunGeo = new THREE.SphereGeometry(8, 64, 64);
+            const sunMat = new THREE.MeshBasicMaterial({ color: 0xfff500 });
+            sun = new THREE.Mesh(sunGeo, sunMat);
+            scene.add(sun);
+
+            const sunGlowGeo = new THREE.SphereGeometry(8.5, 64, 64);
+            const sunGlowMat = new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.3 });
+            const sunGlow = new THREE.Mesh(sunGlowGeo, sunGlowMat);
+            scene.add(sunGlow);
+
+            starField = createStars(8000, 0xffffff, 1.2);
+            starField2 = createStars(2000, 0xff3366, 1.8);
+            scene.add(starField);
+            scene.add(starField2);
+
+            planetData.forEach((data, index) => {
+                const orbitGroup = new THREE.Group();
+                orbitGroup.rotation.y = Math.random() * Math.PI * 2;
+                scene.add(orbitGroup);
+
+                const geo = new THREE.SphereGeometry(data.size, 32, 32);
+                const mat = new THREE.MeshStandardMaterial({ 
+                    color: data.color,
+                    roughness: 0.6,
+                    metalness: 0.3,
+                    emissive: data.color,
+                    emissiveIntensity: 0.1
+                });
+                const mesh = new THREE.Mesh(geo, mat);
+                mesh.position.x = data.distance;
+                orbitGroup.add(mesh);
+
+                if (data.ring) {
+                    const ringGeo = new THREE.TorusGeometry(data.size * 1.8, 0.25, 2, 100);
+                    const ringMat = new THREE.MeshBasicMaterial({ color: data.color, transparent: true, opacity: 0.4 });
+                    const ring = new THREE.Mesh(ringGeo, ringMat);
+                    ring.rotation.x = Math.PI / 2.5;
+                    mesh.add(ring);
+                }
+
+                const pathGeo = new THREE.TorusGeometry(data.distance, 0.05, 8, 300);
+                const pathMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.05 });
+                const path = new THREE.Mesh(pathGeo, pathMat);
+                path.rotation.x = Math.PI / 2;
+                scene.add(path);
+
+                planets.push({ mesh, orbitGroup, speed: data.speed, data });
+                updateProgress((index + 1) / planetData.length * 100);
+            });
+
+            const ambient = new THREE.AmbientLight(0x404040, 0.7);
+            scene.add(ambient);
+            const sunLight = new THREE.PointLight(0xffffff, 2.5, 800);
+            scene.add(sunLight);
+
+            window.addEventListener('resize', onResize);
+            window.addEventListener('click', onClick);
+            window.addEventListener('touchstart', (e) => {
+                mouse.x = (e.touches[0].clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(e.touches[0].clientY / window.innerHeight) * 2 + 1;
+                checkIntersects();
+            });
+            
+            completeLoading();
+        }
+
+        function createStars(count, color, size) {
+            const geo = new THREE.BufferGeometry();
+            const pos = new Float32Array(count * 3);
+            for (let i = 0; i < count * 3; i++) pos[i] = (Math.random() - 0.5) * 2500;
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            return new THREE.Points(geo, new THREE.PointsMaterial({ color, size, transparent: true, opacity: 0.8 }));
+        }
+
+        function updateProgress(val) {
+            document.getElementById('progress-bar').style.width = val + '%';
+        }
+
+        function completeLoading() {
+            setTimeout(() => {
+                document.getElementById('loader').style.opacity = '0';
+                document.getElementById('loader').style.visibility = 'hidden';
+                document.getElementById('ui-layer').classList.add('visible');
+            }, 1000);
+        }
+
+        function onResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function onClick(e) {
+            mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+            checkIntersects();
+        }
+
+        function checkIntersects() {
+            if (isCardOpen) return;
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects([...planets.map(p => p.mesh), sun]);
+
+            if (intersects.length > 0) {
+                const obj = intersects[0].object;
+                if (obj === sun) {
+                    showCard({ name: "Солнце", text: "Ярчайшая звезда, дарящая жизнь и тепло всему вокруг, - прямо как твое присутствие согревает меня." });
+                } else {
+                    const p = planets.find(p => p.mesh === obj);
+                    showCard({ name: p.data.name, text: p.data.text });
+                }
+            }
+        }
+
+        function typeWriter(text, elementId) {
+            const element = document.getElementById(elementId);
+            element.innerText = "";
+            let i = 0;
+            clearInterval(typingInterval);
+            typingInterval = setInterval(() => {
+                if (i < text.length) {
+                    element.innerText += text.charAt(i);
+                    i++;
+                } else {
+                    clearInterval(typingInterval);
+                }
+            }, 25);
+        }
+
+        function getPersonalMessage() {
+            const fixedMessage = "Я люблю тебя и хочу проводить с тобой время и общатся. Надеюсь это взаимно.\n\nМатвей";
+            showCard({ name: "Для тебя", text: fixedMessage });
+        }
+
+        function showCard(data) {
+            isCardOpen = true;
+            const card = document.getElementById('info-card');
+            document.getElementById('card-title').innerText = data.name.toUpperCase();
+            card.classList.add('active');
+            if (data.text) typeWriter(data.text, 'card-text');
+        }
+
+        function closeCard() {
+            isCardOpen = false;
+            document.getElementById('info-card').classList.remove('active');
+            setTimeout(() => {
+                document.getElementById('card-text').innerText = "";
+            }, 500);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = Date.now() * 0.001;
+
+            planets.forEach(p => {
+                p.orbitGroup.rotation.y += p.speed * 0.5;
+                p.mesh.rotation.y += 0.01;
+                p.mesh.position.y = Math.sin(time + p.data.distance) * 0.6;
+            });
+
+            const s = 1 + Math.sin(time * 1.5) * 0.02;
+            sun.scale.set(s, s, s);
+
+            starField.rotation.y += 0.0003;
+            starField2.rotation.y -= 0.0001;
+
+            camera.position.x += (mouse.x * 40 - camera.position.x) * 0.05;
+            camera.position.y += (mouse.y * 20 + 60 - camera.position.y) * 0.05;
+            camera.lookAt(0, 0, 0);
+
+            renderer.render(scene, camera);
+        }
+
+        init();
+        animate();
+    </script>
+</body>
+</html>
